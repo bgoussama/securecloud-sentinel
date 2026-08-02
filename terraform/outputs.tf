@@ -7,3 +7,7 @@ output "aws_region" {
   description = "AWS region used by this project."
   value       = "eu-west-3"
 }
+output "cloudtrail_name" {
+  description = "Name of the CloudTrail audit trail."
+  value       = aws_cloudtrail.security_audit.name
+}
