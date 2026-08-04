@@ -4,3 +4,4 @@
 *.tfvars
 .env
 *.pem
+terraform/lambda/*.zip
