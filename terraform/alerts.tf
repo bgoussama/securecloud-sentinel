@@ -1,17 +1,18 @@
-# SNS topic: the channel used to send security alert emails.
+# SNS topic: the email-alert channel for the project.
 resource "aws_sns_topic" "security_alerts" {
   name = "securecloud-sentinel-security-alerts"
 }
 
-# Email subscription. It was confirmed manually through the AWS email.
+# Your confirmed email subscription.
 resource "aws_sns_topic_subscription" "security_alert_email" {
-  topic_arn                       = aws_sns_topic.security_alerts.arn
-  protocol                        = "email"
-  endpoint                        = var.alert_email
+  topic_arn = aws_sns_topic.security_alerts.arn
+  protocol  = "email"
+  endpoint  = var.alert_email
+
   confirmation_timeout_in_minutes = 5
 }
 
-# EventBridge rule: detects sensitive AWS API calls logged by CloudTrail.
+# Detect critical security changes recorded by CloudTrail.
 resource "aws_cloudwatch_event_rule" "critical_security_changes" {
   name        = "securecloud-sentinel-critical-security-changes"
   description = "Alerts on sensitive IAM, S3, and CloudTrail changes."
@@ -34,20 +35,17 @@ resource "aws_cloudwatch_event_rule" "critical_security_changes" {
         "cloudtrail.amazonaws.com"
       ]
 
-      # Explicit list of actions considered critical for this lab.
       eventName = [
         "StopLogging",
         "StartLogging",
         "DeleteTrail",
         "UpdateTrail",
         "PutEventSelectors",
-
         "DeleteBucket",
         "PutBucketPolicy",
         "DeleteBucketPolicy",
         "PutBucketPublicAccessBlock",
         "DeletePublicAccessBlock",
-
         "CreateAccessKey",
         "UpdateAccessKey",
         "DeleteAccessKey",
@@ -61,7 +59,7 @@ resource "aws_cloudwatch_event_rule" "critical_security_changes" {
   })
 }
 
-# Topic policy: allows the account owner to manage the topic.
+# Allow the AWS account and both EventBridge rules to publish to SNS.
 data "aws_iam_policy_document" "security_alerts_sns" {
   statement {
     sid    = "AllowAccountManagement"
@@ -69,6 +67,7 @@ data "aws_iam_policy_document" "security_alerts_sns" {
 
     principals {
       type = "AWS"
+
       identifiers = [
         "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
       ]
@@ -86,10 +85,11 @@ data "aws_iam_policy_document" "security_alerts_sns" {
       "SNS:AddPermission"
     ]
 
-    resources = [aws_sns_topic.security_alerts.arn]
+    resources = [
+      aws_sns_topic.security_alerts.arn
+    ]
   }
 
-  # Allows only this EventBridge rule to publish security alerts.
   statement {
     sid    = "AllowEventBridgePublish"
     effect = "Allow"
@@ -99,23 +99,33 @@ data "aws_iam_policy_document" "security_alerts_sns" {
       identifiers = ["events.amazonaws.com"]
     }
 
-    actions   = ["SNS:Publish"]
-    resources = [aws_sns_topic.security_alerts.arn]
+    actions = [
+      "SNS:Publish"
+    ]
+
+    resources = [
+      aws_sns_topic.security_alerts.arn
+    ]
 
     condition {
       test     = "ArnEquals"
       variable = "aws:SourceArn"
-      values   = [aws_cloudwatch_event_rule.critical_security_changes.arn]
+
+      values = [
+        aws_cloudwatch_event_rule.critical_security_changes.arn,
+        aws_cloudwatch_event_rule.failed_console_logins.arn
+      ]
     }
   }
 }
 
+# Apply the SNS topic policy.
 resource "aws_sns_topic_policy" "security_alerts" {
   arn    = aws_sns_topic.security_alerts.arn
   policy = data.aws_iam_policy_document.security_alerts_sns.json
 }
 
-# Connects the EventBridge detection rule to the SNS email-alert topic.
+# Connect critical-security rule to SNS.
 resource "aws_cloudwatch_event_target" "security_alert_email" {
   rule      = aws_cloudwatch_event_rule.critical_security_changes.name
   target_id = "SendSecurityAlertEmail"
