@@ -1,9 +1,9 @@
-# SNS topic: the email-alert channel for the project.
+# SNS topic for critical security alerts in eu-west-3.
 resource "aws_sns_topic" "security_alerts" {
   name = "securecloud-sentinel-security-alerts"
 }
 
-# Your confirmed email subscription.
+# Email subscription for critical security alerts.
 resource "aws_sns_topic_subscription" "security_alert_email" {
   topic_arn = aws_sns_topic.security_alerts.arn
   protocol  = "email"
@@ -12,7 +12,7 @@ resource "aws_sns_topic_subscription" "security_alert_email" {
   confirmation_timeout_in_minutes = 5
 }
 
-# Detect critical security changes recorded by CloudTrail.
+# Detect sensitive IAM, S3, and CloudTrail changes.
 resource "aws_cloudwatch_event_rule" "critical_security_changes" {
   name        = "securecloud-sentinel-critical-security-changes"
   description = "Alerts on sensitive IAM, S3, and CloudTrail changes."
@@ -59,7 +59,7 @@ resource "aws_cloudwatch_event_rule" "critical_security_changes" {
   })
 }
 
-# Allow the AWS account and both EventBridge rules to publish to SNS.
+# Allow EventBridge to publish only critical-security alerts to this SNS topic.
 data "aws_iam_policy_document" "security_alerts_sns" {
   statement {
     sid    = "AllowAccountManagement"
@@ -112,20 +112,18 @@ data "aws_iam_policy_document" "security_alerts_sns" {
       variable = "aws:SourceArn"
 
       values = [
-        aws_cloudwatch_event_rule.critical_security_changes.arn,
-        aws_cloudwatch_event_rule.failed_console_logins.arn
+        aws_cloudwatch_event_rule.critical_security_changes.arn
       ]
     }
   }
 }
 
-# Apply the SNS topic policy.
 resource "aws_sns_topic_policy" "security_alerts" {
   arn    = aws_sns_topic.security_alerts.arn
   policy = data.aws_iam_policy_document.security_alerts_sns.json
 }
 
-# Connect critical-security rule to SNS.
+# Deliver critical-security events to the eu-west-3 SNS topic.
 resource "aws_cloudwatch_event_target" "security_alert_email" {
   rule      = aws_cloudwatch_event_rule.critical_security_changes.name
   target_id = "SendSecurityAlertEmail"
