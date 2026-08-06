@@ -40,7 +40,7 @@ jobs:
       - name: Validate Terraform configuration
         run: terraform validate -no-color
 
-      - name: Scan Terraform for security misconfigurations
+      - name: Scan Terraform with Trivy
         uses: aquasecurity/trivy-action@57a97c7
         with:
           scan-type: config
