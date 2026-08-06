@@ -1,0 +1,49 @@
+name: Terraform Security Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform-security.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  terraform-security:
+    name: Terraform Validation and IaC Security Scan
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.15.8"
+          terraform_wrapper: false
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive
+
+      - name: Initialize Terraform without remote backend
+        run: terraform init -backend=false -input=false
+
+      - name: Validate Terraform configuration
+        run: terraform validate -no-color
+
+      - name: Scan Terraform for security misconfigurations
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: config
+          scan-ref: terraform
+          severity: HIGH,CRITICAL
+          exit-code: "1"
