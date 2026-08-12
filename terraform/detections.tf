@@ -1,8 +1,8 @@
 # SNS topic dedicated to failed console-login alerts in us-east-1.
-# trivy:ignore:AVD-AWS-0095
 # Justification: EventBridge publishes to this topic. Encrypting it correctly
 # requires a customer-managed KMS key and extra cost; this student lab uses
 # least-privilege topic policies and contains no sensitive business data.
+#trivy:ignore:AVD-AWS-0095
 resource "aws_sns_topic" "console_login_alerts" {
   provider = aws.us_east_1
   name     = "securecloud-sentinel-console-login-alerts"

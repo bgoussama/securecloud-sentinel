@@ -1,8 +1,8 @@
 # SNS topic for critical security alerts in eu-west-3.
-# trivy:ignore:AVD-AWS-0095
 # Justification: EventBridge publishes to this topic. Encrypting it correctly
 # requires a customer-managed KMS key and extra cost; this student lab uses
 # least-privilege topic policies and contains no sensitive business data.
+#trivy:ignore:AVD-AWS-0095
 resource "aws_sns_topic" "security_alerts" {
   name = "securecloud-sentinel-security-alerts"
 }
