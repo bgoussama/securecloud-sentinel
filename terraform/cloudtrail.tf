@@ -45,9 +45,9 @@ resource "aws_s3_bucket_policy" "cloudtrail_logs" {
   policy = data.aws_iam_policy_document.cloudtrail_s3.json
 }
 
+# Records AWS management activity and S3 file activity.
 # Justification: Student lab retains default CloudTrail encryption to avoid extra cost and customer-managed KMS.
 #trivy:ignore:AVD-AWS-0015
-# Records AWS management activity and S3 file activity.
 resource "aws_cloudtrail" "security_audit" {
   name                          = "securecloud-sentinel-audit"
   s3_bucket_name                = aws_s3_bucket.security_logs.id
