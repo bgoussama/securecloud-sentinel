@@ -41,9 +41,8 @@ jobs:
         run: terraform validate -no-color
 
       - name: Scan Terraform with Trivy
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cb8af1
-        with:
-          scan-type: config
-          scan-ref: terraform
-          severity: HIGH,CRITICAL
-          exit-code: "1"
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/terraform:/work:ro" \
+            aquasec/trivy:0.73.0 \
+            config --severity HIGH,CRITICAL --exit-code 1 /work
